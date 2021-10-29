@@ -16,6 +16,7 @@ jobs:
     - uses: actions/checkout@v2
     - name: Build and push the Docker image
       run: | 
-        docker build . --file Dockerfile --tag ghcr.io/simar-api:$(date +%s)
+        IMAGE_NAME=ghcr.io/simar-api:$(date +%s)
+        docker build . --file Dockerfile --tag $IMAGE_NAME
         echo "${{ github.token }}" | docker login ghcr.io -u gfrn --password-stdin
-        docker push ghcr.io/simar-api:$(date +%s)
+        docker push $IMAGE_NAME
