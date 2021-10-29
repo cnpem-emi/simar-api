@@ -27,7 +27,7 @@ def main_loop(private_key, claims):
 
             if message:
                 if warning_count > 1:
-                    message = f"{last_pv} and {warning_count - 1} other PV{'s' if warning_count - 2 > 0 else ''} have violated their limits"
+                    message = f"{last_pv} and {warning_count - 1} other PV{'s' if warning_count - 2 > 0 else ''} have violated their limits"  # noqa: E501
 
                 data = {
                     "title": "PV Limit Violation",
