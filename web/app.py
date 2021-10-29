@@ -15,7 +15,7 @@ connect(
     port=application.config["MONGO_PORT"],
     username=application.config["MONGO_USER"],
     password=application.config["MONGO_PASS"],
-    authentication_source="admin",
+    authentication_source=application.config["MONGO_AUTH_DB"],
 )
 
 monitor_thread = Thread(
