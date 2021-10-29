@@ -1,0 +1,35 @@
+version: '3.7'
+
+services:
+  web:
+    image: simar-api_web
+    build:
+      context: .
+    networks:
+      - simar-network
+    command: ./start.sh
+    env_file:
+      - ./.env
+    ports:
+      - "1337:80"
+    deploy:
+      mode: replicated
+      replicas: 1
+      placement:
+        constraints:
+          - node.hostname != TA-TiRack-CO-FWSrv-1
+          - node.hostname != CA-RaTim-CO-IOCSrv
+          - node.hostname != IA-14RaDiag03-CO-IOCSrv
+          - node.hostname != IA-16RaBbB-CO-IOCSrv
+          - node.hostname != IA-18RaDiag04-CO-IOCSrv
+          - node.hostname != IA-20RaDiag01-CO-IOCSrv-1
+          - node.hostname != IA-20RaDiag01-CO-IOCSrv-2
+          - node.hostname != IA-20RaDiag02-CO-IOCSrv-1
+          - node.hostname != IA-20RaDiag02-CO-IOCSrv-2
+
+    
+networks:
+  simar-network:
+    ipam:
+      config:
+        - subnet: 192.168.20.0/24
