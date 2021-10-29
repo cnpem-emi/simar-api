@@ -1,5 +1,4 @@
 import json
-from config import Config
 from pywebpush import WebPushException, webpush
 from api.models import User
 from epics import caget
@@ -14,8 +13,8 @@ def main_loop(private_key, claims):
             warning_count = 0
             for pv in user.subbed_pvs:
                 if pv.name not in pv_cache:
-                    pv_cache[pv.name] = 900#caget(pv.name, timeout=2)
-                
+                    pv_cache[pv.name] = caget(pv.name, timeout=2)
+
                 if pv.hi_limit < pv_cache[pv.name]:
                     message = f"{pv.name} has surpassed {pv.hi_limit} (Current value: {pv_cache[pv.name]})"
                 elif pv.lo_limit > pv_cache[pv.name]:
@@ -29,7 +28,7 @@ def main_loop(private_key, claims):
             if message:
                 if warning_count > 1:
                     message = f"{last_pv} and {warning_count - 1} other PV{'s' if warning_count - 2 > 0 else ''} have violated their limits"
-                    
+
                 data = {
                     "title": "PV Limit Violation",
                     "body": message,

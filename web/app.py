@@ -18,7 +18,11 @@ connect(
     authentication_source="admin",
 )
 
-monitor_thread = Thread(target=lambda: main_loop(application.config["VAPID_PRIVATE_KEY"], application.config["VAPID_CLAIMS"]))
+monitor_thread = Thread(
+    target=lambda: main_loop(
+        application.config["VAPID_PRIVATE_KEY"], application.config["VAPID_CLAIMS"]
+    )
+)
 monitor_thread.start()
 
 application.register_blueprint(bp, url_prefix="/simar/api")
