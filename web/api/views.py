@@ -38,9 +38,6 @@ def get_pvs():
 
 @bp.post("/subscribe")
 def subscribe():
-    if request.method == "GET":
-        return jsonify({"public_key": current_app.config.VAPID_PUBLIC_KEY})
-
     try:
         ms_id = get_ms_id(request.headers["Authorization"])
     except KeyError:
