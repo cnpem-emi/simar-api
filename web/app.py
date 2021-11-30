@@ -3,10 +3,12 @@ from mongoengine import connect
 from config import Config
 from api.monitor import main_loop
 from threading import Thread
+from flask_cors import CORS
 
 from api.views import bp
 
 application = Flask(__name__)
+CORS(application)
 application.config.from_object(Config)
 
 connect(

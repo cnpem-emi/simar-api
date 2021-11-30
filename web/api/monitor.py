@@ -11,7 +11,9 @@ def main_loop(private_key, claims):
         for user in User.objects():
             message, last_pv = "", ""
             warning_count = 0
-            for pv in user.subbed_pvs:
+            for pv in user.pvs:
+                if not pv.subbed:
+                    continue
                 if pv.name not in pv_cache:
                     pv_cache[pv.name] = caget(pv.name, timeout=2)
 

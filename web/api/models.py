@@ -5,13 +5,14 @@ from mongoengine import (
     ListField,
     EmbeddedDocument,
 )
-from mongoengine.fields import FloatField
+from mongoengine.fields import BooleanField, FloatField
 
 
 class Pv(EmbeddedDocument):
     name = StringField(required=True)
     hi_limit = FloatField(required=True)
     lo_limit = FloatField(required=True)
+    subbed = BooleanField(required=True, default=False)
 
 
 class Device(EmbeddedDocument):
@@ -22,5 +23,5 @@ class Device(EmbeddedDocument):
 
 class User(Document):
     ms_id = StringField(required=True, unique=True)
-    devices = ListField(EmbeddedDocumentField(Device), required=True)
-    subbed_pvs = ListField(EmbeddedDocumentField(Pv), required=True)
+    devices = ListField(EmbeddedDocumentField(Device), required=False)
+    pvs = ListField(EmbeddedDocumentField(Pv), required=True)
