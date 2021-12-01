@@ -1,8 +1,9 @@
 import json
 
-from api.util import validate_id
+from api.util import send_telegram_message, validate_id, validate_id_with_name
 from flask import jsonify, request, current_app, Blueprint
 from api.models import Pv, User, Device
+from api.templates import hello
 from pywebpush import webpush, WebPushException
 
 bp = Blueprint("simar", __name__)
@@ -102,8 +103,8 @@ def notify(ms_id):
             webpush(
                 subscription_info=json.loads(sub),
                 data=json.dumps(data),
-                vapid_private_key=current_app.config.VAPID_PRIVATE_KEY,
-                vapid_claims=current_app.config.VAPID_CLAIMS,
+                vapid_private_key=current_app.config["VAPID_PRIVATE_KEY"],
+                vapid_claims=current_app.config["VAPID_CLAIMS"],
             )
             count += 1
         except WebPushException as e:
@@ -137,18 +138,14 @@ def set_limits(ms_id):
 
 
 @bp.post("/register_telegram")
-@validate_id
-def register_telegram(ms_id):
-    pass
+@validate_id_with_name
+def register_telegram(ms_id, name):
+    if "id" not in request.json:
+        return "Bad Request", 400
 
+    id = request.json.get("id")
 
-@bp.post("/sub_telegram")
-@validate_id
-def subscribe_telegram(ms_id):
-    pass
-
-
-@bp.post("/unsub_telegram")
-@validate_id
-def unsubscribe_telegram(ms_id):
-    pass
+    User.objects(ms_id=ms_id).update_one(set__telegram_id=id)
+    return "Message Sent", send_telegram_message(
+        current_app.config["TELEGRAM_TOKEN"], hello.safe_substitute(NAME=name), id
+    )

@@ -7,9 +7,9 @@ from api.templates import (
     push_warning_low,
     push_warning_high,
 )
+from api.util import send_telegram_message
 from epics import caget
 from time import sleep
-import requests
 
 
 def main_loop(private_key, claims, telegram_token):
@@ -64,10 +64,7 @@ def main_loop(private_key, claims, telegram_token):
                     message = f"{last_pv} and {warning_count - 1} other PV{'s' if warning_count - 2 > 0 else ''} have violated their limits"  # noqa: E501
 
                 if user.telegram_id:
-                    requests.post(
-                        f"https://api.telegram.org/bot{telegram_token}/sendMessage",
-                        {"chat_id": user.telegram_id, "parse_mode": "Markdown", "text": t_message},
-                    )
+                    send_telegram_message(telegram_token, t_message, user.telegram_id)
 
                 data = {
                     "title": "PV Limit Violation",
