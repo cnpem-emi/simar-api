@@ -1,26 +1,58 @@
 import json
 from pywebpush import WebPushException, webpush
 from api.models import User
+from api.templates import (
+    telegram_warning_high,
+    telegram_warning_low,
+    push_warning_low,
+    push_warning_high,
+)
 from epics import caget
 from time import sleep
+import requests
 
 
-def main_loop(private_key, claims):
+def main_loop(private_key, claims, telegram_token):
     while True:
         pv_cache = {}
         for user in User.objects():
-            message, last_pv = "", ""
+            message, last_pv, t_message = "", "", ""
             warning_count = 0
             for pv in user.pvs:
                 if not pv.subbed:
                     continue
                 if pv.name not in pv_cache:
-                    pv_cache[pv.name] = caget(pv.name, timeout=2)
+                    pv_cache[pv.name] = {
+                        "value": caget(pv.name, timeout=2),
+                        "egu": caget(pv.name + ".EGU", timeout=2),
+                    }
 
-                if pv.hi_limit < pv_cache[pv.name]:
-                    message = f"{pv.name} has surpassed {pv.hi_limit} (Current value: {pv_cache[pv.name]})"
-                elif pv.lo_limit > pv_cache[pv.name]:
-                    message = f"{pv.name} has gone below {pv.lo_limit} (Current value: {pv_cache[pv.name]})"
+                if pv.hi_limit < pv_cache[pv.name]["value"]:
+                    message = push_warning_high.safe_substitute(
+                        PV=pv.name,
+                        LIMIT=pv.hi_limit,
+                        EGU=pv_cache[pv.name]["egu"],
+                        VALUE=pv_cache[pv.name]["value"],
+                    )
+                    t_message += telegram_warning_high.safe_substitute(
+                        PV=pv.name,
+                        LIMIT=pv.hi_limit,
+                        EGU=pv_cache[pv.name]["egu"],
+                        VALUE=pv_cache[pv.name]["value"],
+                    )
+                elif pv.lo_limit > pv_cache[pv.name]["value"]:
+                    message = message = push_warning_low.safe_substitute(
+                        PV=pv.name,
+                        LIMIT=pv.hi_limit,
+                        EGU=pv_cache[pv.name]["egu"],
+                        VALUE=pv_cache[pv.name]["value"],
+                    )
+                    t_message += telegram_warning_low.safe_substitute(
+                        PV=pv.name,
+                        LIMIT=pv.hi_limit,
+                        EGU=pv_cache[pv.name]["egu"],
+                        VALUE=pv_cache[pv.name]["value"],
+                    )
                 else:
                     continue
 
@@ -30,6 +62,12 @@ def main_loop(private_key, claims):
             if message:
                 if warning_count > 1:
                     message = f"{last_pv} and {warning_count - 1} other PV{'s' if warning_count - 2 > 0 else ''} have violated their limits"  # noqa: E501
+
+                if user.telegram_id:
+                    requests.post(
+                        f"https://api.telegram.org/bot{telegram_token}/sendMessage",
+                        {"chat_id": user.telegram_id, "parse_mode": "Markdown", "text": t_message},
+                    )
 
                 data = {
                     "title": "PV Limit Violation",
@@ -56,4 +94,4 @@ def main_loop(private_key, claims):
                         )
                     except WebPushException as e:
                         print(e.response.json())
-        sleep(60)
+        sleep(120)

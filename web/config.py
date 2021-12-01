@@ -19,3 +19,4 @@ class Config(object):
     MONGO_USER = os.getenv("MONGO_USER")
     MONGO_PASS = os.getenv("MONGO_PASS")
     MONGO_AUTH_DB = os.getenv("MONGO_AUTH_DB")
+    TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
