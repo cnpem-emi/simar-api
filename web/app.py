@@ -20,6 +20,16 @@ connect(
     authentication_source=application.config["MONGO_AUTH_DB"],
 )
 
+connect(
+    "epicstel",
+    host=application.config["MONGO_HOST"],
+    port=application.config["MONGO_PORT"],
+    username=application.config["MONGO_USER"],
+    password=application.config["MONGO_PASS"],
+    authentication_source=application.config["MONGO_AUTH_DB"],
+    alias="epicstel",
+)
+
 monitor_thread = Thread(
     target=lambda: main_loop(
         application.config["VAPID_PRIVATE_KEY"], application.config["VAPID_CLAIMS"]

@@ -1,6 +1,6 @@
 import json
 
-from api.util import get_ms_id
+from api.util import validate_id
 from flask import jsonify, request, current_app, Blueprint
 from api.models import Pv, User, Device
 from pywebpush import webpush, WebPushException
@@ -8,28 +8,15 @@ from pywebpush import webpush, WebPushException
 bp = Blueprint("simar", __name__)
 
 
-@bp.get("/")
-def status():
-    return "ok"
-
-
 @bp.get("/get_subscriptions")
-def get_subs():
-    try:
-        ms_id = get_ms_id(request.headers["Authorization"])
-    except KeyError:
-        return "No valid token present", 401
-
+@validate_id
+def get_subs(ms_id):
     return jsonify([pv.name for pv in User.objects(ms_id=ms_id, pvs__subbed=True)[0].pvs]), 200
 
 
 @bp.get("/get_pvs")
-def get_pvs():
-    try:
-        ms_id = get_ms_id(request.headers["Authorization"])
-    except KeyError:
-        return "No valid token present", 401
-
+@validate_id
+def get_pvs(ms_id):
     try:
         return jsonify([pv.to_mongo() for pv in User.objects(ms_id=ms_id)[0].pvs]), 200
     except Exception:
@@ -37,12 +24,8 @@ def get_pvs():
 
 
 @bp.post("/subscribe")
-def subscribe():
-    try:
-        ms_id = get_ms_id(request.headers["Authorization"])
-    except KeyError:
-        return "No valid token present", 401
-
+@validate_id
+def subscribe(ms_id):
     r_json = request.json
     sub = r_json.get("sub")
 
@@ -79,12 +62,8 @@ def subscribe():
 
 
 @bp.post("/unsubscribe")
-def unsubscribe():
-    try:
-        ms_id = get_ms_id(request.headers["Authorization"])
-    except KeyError:
-        return "No valid token present", 401
-
+@validate_id
+def unsubscribe(ms_id):
     if not request.json.get("pvs"):
         return "Bad Request", 400
 
@@ -95,23 +74,16 @@ def unsubscribe():
 
 
 @bp.delete("/unsubscribe_all")
-def unsubscribe_all():
-    try:
-        ms_id = get_ms_id(request.headers["Authorization"])
-    except KeyError:
-        return "No valid token present", 401
-
+@validate_id
+def unsubscribe_all(ms_id):
     User.objects(ms_id=ms_id).delete()
     return "OK", 200
 
 
 @bp.post("/notify")
-def notify():
+@validate_id
+def notify(ms_id):
     count = 0
-    try:
-        ms_id = get_ms_id(request.headers["Authorization"])
-    except KeyError:
-        return "No valid token present", 401
 
     data = {
         "title": request.json.get("title"),
@@ -141,12 +113,8 @@ def notify():
 
 
 @bp.post("/set_limits")
-def set_limits():
-    try:
-        ms_id = get_ms_id(request.headers["Authorization"])
-    except KeyError:
-        return "No valid token present", 401
-
+@validate_id
+def set_limits(ms_id):
     for pv in request.json.get("pvs"):
         update = 0
 
@@ -166,3 +134,21 @@ def set_limits():
                 upsert=True,
             )
     return "OK", 200
+
+
+@bp.post("/register_telegram")
+@validate_id
+def register_telegram(ms_id):
+    pass
+
+
+@bp.post("/sub_telegram")
+@validate_id
+def subscribe_telegram(ms_id):
+    pass
+
+
+@bp.post("/unsub_telegram")
+@validate_id
+def unsubscribe_telegram(ms_id):
+    pass

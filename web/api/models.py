@@ -5,7 +5,7 @@ from mongoengine import (
     ListField,
     EmbeddedDocument,
 )
-from mongoengine.fields import BooleanField, FloatField
+from mongoengine.fields import BooleanField, FloatField, IntField
 
 
 class Pv(EmbeddedDocument):
@@ -25,3 +25,4 @@ class User(Document):
     ms_id = StringField(required=True, unique=True)
     devices = ListField(EmbeddedDocumentField(Device), required=False)
     pvs = ListField(EmbeddedDocumentField(Pv), required=True)
+    telegram_id = IntField(required=False)
