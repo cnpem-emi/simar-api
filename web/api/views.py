@@ -151,7 +151,6 @@ def set_limits():
         update = 0
 
         try:
-            # user = User.objects(ms_id=ms_id)
             update = User.objects(ms_id=ms_id, pvs__name=pv.get("name")).update(
                 set__pvs__S__hi_limit=pv.get("hi_limit"), set__pvs__S__lo_limit=pv.get("lo_limit")
             )
