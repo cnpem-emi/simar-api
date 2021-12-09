@@ -27,4 +27,4 @@ monitor_thread = Thread(
 )
 monitor_thread.start()
 
-application.register_blueprint(bp, url_prefix="/simar/api")
+application.register_blueprint(bp)
