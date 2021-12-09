@@ -41,3 +41,17 @@ def validate_id_with_name(function):
         return function(ms_id, name, *args, **kwargs)
 
     return wrap_function
+
+
+def validate_id_with_username(function):
+    @wraps(function)
+    def wrap_function(*args, **kwargs):
+        try:
+            ms_id = get_ms_id(request.headers["Authorization"])["id"]
+            username = get_ms_id(request.headers["Authorization"])["userPrincipalName"]
+        except KeyError:
+            return "No valid token present", 401
+
+        return function(ms_id, username, *args, **kwargs)
+
+    return wrap_function

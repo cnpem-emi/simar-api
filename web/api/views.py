@@ -1,4 +1,5 @@
 import json
+from redis import Redis
 
 from api.util import send_telegram_message, validate_id, validate_id_with_name
 from flask import jsonify, request, current_app, Blueprint
@@ -6,6 +7,7 @@ from api.models import Pv, User, Device
 from api.templates import hello
 from pywebpush import webpush, WebPushException
 
+redis_server = Redis(host="10.0.38.46", port=6379)
 bp = Blueprint("simar", __name__)
 
 
@@ -137,6 +139,44 @@ def set_limits(ms_id):
     return "OK", 200
 
 
+@bp.post("/outlets")
+@validate_id_with_name
+def set_outlets(ms_id, username):
+    if "host" not in request.args or "outlets" not in request.json:
+        return "Bad Request", 400
+
+    validated_outlets = {}
+
+    for outlet, status in enumerate(request.json.get("outlets")):
+        if status not in [0, 1]:
+            continue
+
+        validated_outlets[outlet] = str(status) + ":" + username
+
+    if validated_outlets:
+        redis_server.hmset(request.args.get("host"), validated_outlets)
+    else:
+        return "Bad Request", 400
+
+    return "OK", 200
+
+
+@bp.get("/outlets")
+@validate_id
+def get_outlets(ms_id):
+    if "host" not in request.args:
+        return "Bad Request", 400
+
+    validated_outlets = []
+
+    for outlet in redis_server.hgetall(request.args.get("host") + ":RB"):
+        validated_outlets.append(1 if outlet.decode() else 0)
+
+    return jsonify({"outlets": validated_outlets})
+
+    # return "OK", 200
+
+
 @bp.post("/register_telegram")
 @validate_id_with_name
 def register_telegram(ms_id, name):
@@ -146,6 +186,6 @@ def register_telegram(ms_id, name):
     id = request.json.get("id")
 
     User.objects(ms_id=ms_id).update_one(set__telegram_id=id)
-    return "Message Sent", send_telegram_message(
+    return "Message Relayed", send_telegram_message(
         current_app.config["TELEGRAM_TOKEN"], hello.safe_substitute(NAME=name), id
     )
