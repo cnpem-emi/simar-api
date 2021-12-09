@@ -7,7 +7,7 @@ from api.models import Pv, User, Device
 from api.templates import hello
 from pywebpush import webpush, WebPushException
 
-redis_server = Redis(host="10.0.38.46", port=6379)
+redis_server = Redis(host="redis-db", port=6379)
 bp = Blueprint("simar", __name__)
 
 
