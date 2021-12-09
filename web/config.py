@@ -10,6 +10,12 @@ class Config(object):
 
     THREADS_PER_PAGE = 2
 
+    with open("/run/secrets/VAPID_PRIVATE_KEY") as secret:
+        VAPID_PRIVATE_KEY = secret.read()
+
+    with open("/run/secrets/TELEGRAM_BOT_TOKEN") as secret:
+        TELEGRAM_TOKEN = secret.read()
+
     VAPID_PRIVATE_KEY = os.getenv("VAPID_PRIVATE_KEY")
     VAPID_PUBLIC = os.getenv("VAPID_PUBLIC")
     VAPID_CLAIMS = {"sub": "mailto:guilherme.freitas@cnpem.br"}

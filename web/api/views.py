@@ -1,7 +1,7 @@
 import json
 from redis import Redis
 
-from api.util import send_telegram_message, validate_id, validate_id_with_name
+from api.util import send_telegram_message, validate_id, validate_id_with_name, validate_id_with_username
 from flask import jsonify, request, current_app, Blueprint
 from api.models import Pv, User, Device
 from api.templates import hello
@@ -169,8 +169,8 @@ def get_outlets(ms_id):
 
     validated_outlets = []
 
-    for outlet in redis_server.hgetall(request.args.get("host") + ":RB"):
-        validated_outlets.append(1 if outlet.decode() else 0)
+    for status in redis_server.hgetall(request.args.get("host") + ":RB").values():
+        validated_outlets.append(1 if status.decode() == "1" else 0)
 
     return jsonify({"outlets": validated_outlets})
 
