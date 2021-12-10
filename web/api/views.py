@@ -1,7 +1,12 @@
 import json
 from redis import Redis
 
-from api.util import send_telegram_message, validate_id, validate_id_with_name, validate_id_with_username
+from api.util import (
+    send_telegram_message,
+    validate_id,
+    validate_id_with_name,
+    validate_id_with_username,
+)
 from flask import jsonify, request, current_app, Blueprint
 from api.models import Pv, User, Device
 from api.templates import hello
@@ -140,7 +145,7 @@ def set_limits(ms_id):
 
 
 @bp.post("/outlets")
-@validate_id_with_name
+@validate_id_with_username
 def set_outlets(ms_id, username):
     if "host" not in request.args or "outlets" not in request.json:
         return "Bad Request", 400
@@ -173,8 +178,6 @@ def get_outlets(ms_id):
         validated_outlets.append(1 if status.decode() == "1" else 0)
 
     return jsonify({"outlets": validated_outlets})
-
-    # return "OK", 200
 
 
 @bp.post("/register_telegram")

@@ -14,9 +14,8 @@ class Config(object):
         VAPID_PRIVATE_KEY = secret.read()
 
     with open("/run/secrets/TELEGRAM_BOT_TOKEN") as secret:
-        TELEGRAM_TOKEN = secret.read()
+        TELEGRAM_TOKEN = secret.read().split("\n")[0]
 
-    VAPID_PRIVATE_KEY = os.getenv("VAPID_PRIVATE_KEY")
     VAPID_PUBLIC = os.getenv("VAPID_PUBLIC")
     VAPID_CLAIMS = {"sub": "mailto:guilherme.freitas@cnpem.br"}
 
@@ -25,4 +24,3 @@ class Config(object):
     MONGO_USER = os.getenv("MONGO_USER")
     MONGO_PASS = os.getenv("MONGO_PASS")
     MONGO_AUTH_DB = os.getenv("MONGO_AUTH_DB")
-    TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
