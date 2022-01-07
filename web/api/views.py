@@ -187,7 +187,7 @@ def get_node_status():
     status = redis_server.hget(request.args["host"], "state_string")
 
     if status:
-        return jsonify({"status": status})
+        return jsonify({"status": status.decode()})
     else:
         cursor = 0
         hostname = "BBB:*:" + request.args["host"][request.args["host"].find(":") + 1 :]
@@ -198,7 +198,7 @@ def get_node_status():
             searched = True
 
         if name:
-            return jsonify({"status": redis_server.hget(name[0], "state_string")})
+            return jsonify({"status": redis_server.hget(name[0], "state_string").decode()})
         else:
             return "Node not found", 404
 
