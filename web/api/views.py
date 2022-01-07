@@ -167,8 +167,7 @@ def set_outlets(ms_id, username):
 
 
 @bp.get("/outlets")
-@validate_id
-def get_outlets(ms_id):
+def get_outlets():
     if "host" not in request.args:
         return "Bad Request", 400
 
@@ -178,6 +177,30 @@ def get_outlets(ms_id):
         validated_outlets.append(1 if status.decode() == "1" else 0)
 
     return jsonify({"outlets": validated_outlets})
+
+
+@bp.get("/status")
+def get_node_status():
+    if "host" not in request.args:
+        return "Bad Request", 400
+
+    status = redis_server.hget(request.args["host"], "state_string")
+
+    if status:
+        return jsonify({"status": status})
+    else:
+        cursor = 0
+        hostname = "BBB:*:" + request.args["host"][request.args["host"].find(":") + 1 :]
+        name = ""
+        searched = False
+        while not name and (cursor != 0 or not searched):
+            cursor, name = redis_server.scan(cursor=cursor, match=hostname)
+            searched = True
+
+        if name:
+            return jsonify({"status": redis_server.hget(name[0], "state_string")})
+        else:
+            return "Node not found", 404
 
 
 @bp.post("/register_telegram")
