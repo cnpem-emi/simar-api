@@ -37,7 +37,7 @@ def subscribe(ms_id):
     r_json = request.json
     sub = r_json.get("sub")
 
-    if not r_json.get("pvs"):
+    if not r_json.get("pvs") or not sub:
         return "Bad Request", 400
 
     device = Device(
