@@ -57,3 +57,38 @@ def validate_id_with_username(function):
         return function(ms_id, username, *args, **kwargs)
 
     return wrap_function
+
+
+def parse_table(text: str, ignore_split: bool = False) -> dict:
+    table = {}
+
+    for line in text.splitlines():
+        if not line or line[0] == "#":
+            continue
+        col = line.split()
+        table[col[0]] = col[1 :: 2 if ignore_split else 1]
+
+    return table
+
+
+def get_pwr_supply_table(host: str = "10.0.38.46") -> dict:
+    udc_ps = parse_table(
+        requests.get(f"http://{host}/control-system-constants/beaglebone/udc-bsmp.txt").text, True
+    )
+    bbb_udc = parse_table(
+        requests.get(f"http://{host}/control-system-constants/beaglebone/beaglebone-udc.txt").text
+    )
+    ip_bbb = parse_table(
+        requests.get(f"http://{host}/control-system-constants/beaglebone/ip-list.txt").text
+    )
+
+    final_map = {}
+
+    for bbb, udcs in bbb_udc.items():
+        pwr_supplies = []
+        for udc in udcs:
+            pwr_supplies += udc_ps[udc]
+
+        final_map[ip_bbb[bbb][0]] = {"ps": pwr_supplies, "udc": udcs}
+
+    return final_map
