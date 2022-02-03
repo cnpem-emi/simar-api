@@ -248,7 +248,7 @@ def get_beaglebones():
             if bbb_info["sector"] == "Outros":
                 bbb_info["sector"] = "Others"
             else:
-                bbb_info["sector"].replace("Sala", "IA-")
+                bbb_info["sector"] = bbb_info["sector"].replace("Sala", "IA-")
         else:
             bbb_info["sector"] = "Others"
 
