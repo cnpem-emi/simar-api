@@ -2,7 +2,7 @@ version: '3.3'
 
 services:
   web:
-    image: dockerregistry.lnls-sirius.com.br/iot/simar-api:2022-01-27
+    image: dockerregistry.lnls-sirius.com.br/iot/simar-api:2022-02-07
     build:
       context: .
     networks:

@@ -25,13 +25,13 @@ redis_server = Redis(host="redis-db", port=6379, decode_responses=True)
 bp = Blueprint("simar", __name__)
 
 
-@bp.get("/get_subscriptions")
+@bp.get("/subscriptions")
 @validate_id
 def get_subs(ms_id):
     return jsonify([pv.name for pv in User.objects(ms_id=ms_id, pvs__subbed=True)[0].pvs]), 200
 
 
-@bp.get("/get_pvs")
+@bp.get("/pvs")
 @validate_id
 def get_pvs(ms_id):
     try:
@@ -56,6 +56,9 @@ def subscribe(ms_id):
     )
 
     for pv in r_json.get("pvs"):
+        if pv.get("hi_limit") < pv.get("lo_limit"):
+            return "Invalid limits", 400
+
         new_pv = Pv(
             name=pv.get("name"),
             hi_limit=pv.get("hi_limit") or 500,
@@ -90,7 +93,7 @@ def unsubscribe(ms_id):
     return jsonify(request.json.get("pvs")), 200
 
 
-@bp.delete("/unsubscribe_all")
+@bp.delete("/limits")
 @validate_id
 def unsubscribe_all(ms_id):
     User.objects(ms_id=ms_id).delete()
