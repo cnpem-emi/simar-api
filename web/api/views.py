@@ -25,12 +25,6 @@ redis_server = Redis(host="redis-db", port=6379, decode_responses=True)
 bp = Blueprint("simar", __name__)
 
 
-@bp.get("/subscriptions")
-@validate_id
-def get_subs(ms_id):
-    return jsonify([pv.name for pv in User.objects(ms_id=ms_id, pvs__subbed=True)[0].pvs]), 200
-
-
 @bp.get("/pvs")
 @validate_id
 def get_pvs(ms_id):
