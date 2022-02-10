@@ -198,7 +198,7 @@ def get_outlets():
     return jsonify({"outlets": validated_outlets})
 
 
-@bp.post("/register_telegram")
+@bp.post("/telegram")
 @validate_id_with_name
 def register_telegram(ms_id, name):
     if "id" not in request.json:
@@ -211,6 +211,16 @@ def register_telegram(ms_id, name):
         current_app.config["TELEGRAM_TOKEN"], hello.safe_substitute(NAME=name), id
     )
 
+@bp.delete("/telegram")
+@validate_id
+def delete_telegram(ms_id):
+    if "id" not in request.args:
+        return "Bad Request", 400
+
+    id = request.json.get("id")
+
+    User.objects(ms_id=ms_id).update(pull__devices__telegram_id=id)
+    return "OK", 200
 
 @bp.get("/status")
 def get_node_status():
