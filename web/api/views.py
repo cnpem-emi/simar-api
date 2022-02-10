@@ -37,31 +37,44 @@ def get_pvs(ms_id):
 @bp.post("/subscribe")
 @validate_id
 def subscribe(ms_id):
-    r_json = request.json
-    sub = r_json.get("sub")
+    sub = request.json.get("sub")
 
-    if not r_json.get("pvs") or not sub:
+    if not request.json.get("pvs") and not sub:
         return "Bad Request", 400
 
-    device = Device(
-        endpoint=sub.get("endpoint"),
-        auth=sub.get("keys").get("auth"),
-        p256dh=sub.get("keys").get("p256dh"),
+    try:
+        device = Device(
+            endpoint=sub["endpoint"],
+            auth=sub["keys"]["auth"],
+            p256dh=sub["keys"]["p256dh"],
+            user_agent=request.json["device_info"].get("user_agent") or "Unknown",
+            host=request.json["device_info"]["host"],
+        )
+    except KeyError:
+        return "Invalid Device Specification", 400
+
+    User.objects(ms_id=ms_id).update_one(
+        add_to_set__devices=device,
     )
 
-    for pv in r_json.get("pvs"):
+    if not request.json.get("pvs"):
+        return "OK", 200
+
+    for pv in request.json.get("pvs"):
+        if pv.get("hi_limit") is None or pv.get("lo_limit") is None:
+            break
+
         if pv.get("hi_limit") < pv.get("lo_limit"):
             return "Invalid limits", 400
 
         new_pv = Pv(
             name=pv.get("name"),
-            hi_limit=pv.get("hi_limit") or 500,
-            lo_limit=pv.get("lo_limit") or 0,
+            hi_limit=pv.get("hi_limit"),
+            lo_limit=pv.get("lo_limit"),
             subbed=True,
         )
 
         update = User.objects(ms_id=ms_id, pvs__name=pv.get("name")).update_one(
-            add_to_set__devices=device,
             set__pvs__S__subbed=True,
         )
 
@@ -72,7 +85,7 @@ def subscribe(ms_id):
                 upsert=True,
             )
 
-    return jsonify(r_json.get("pvs")), 200
+    return jsonify(request.json.get("pvs")), 200
 
 
 @bp.post("/unsubscribe")
@@ -126,7 +139,7 @@ def notify(ms_id):
     return "OK", 200
 
 
-@bp.post("/set_limits")
+@bp.post("/limits")
 @validate_id
 def set_limits(ms_id):
     for pv in request.json.get("pvs"):
@@ -221,6 +234,32 @@ def get_node_status():
             return jsonify({"status": redis_server.hget(name[0], "state_string")})
         else:
             return "Node not found", 404
+
+
+@bp.get("/devices")
+@validate_id
+def get_devices(ms_id):
+
+    try:
+        user = User.objects(ms_id=ms_id)[0].to_mongo()
+    except IndexError:
+        return "No user found", 404
+
+    try:
+        return jsonify({"devices": user["devices"], "telegram_id": user.get("telegram_id")})
+    except KeyError:
+        return "No devices found for user", 404
+
+
+@bp.delete("/devices")
+@validate_id
+def delete_devices(ms_id):
+    endpoints = request.args.getlist("endpoints")
+    if not endpoints:
+        return "No endpoints sent", 400
+
+    User.objects(ms_id=ms_id).update(pull__devices__endpoint__in=endpoints)
+    return "OK", 200
 
 
 @bp.get("/beaglebones")

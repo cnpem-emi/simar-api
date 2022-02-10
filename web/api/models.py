@@ -17,6 +17,8 @@ class Pv(EmbeddedDocument):
 
 class Device(EmbeddedDocument):
     endpoint = StringField(required=True)
+    user_agent = StringField(required=True)
+    host = StringField(required=True)
     auth = StringField(required=True)
     p256dh = StringField(required=True)
 
