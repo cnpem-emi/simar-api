@@ -211,6 +211,7 @@ def register_telegram(ms_id, name):
         current_app.config["TELEGRAM_TOKEN"], hello.safe_substitute(NAME=name), id
     )
 
+
 @bp.delete("/telegram")
 @validate_id
 def delete_telegram(ms_id):
@@ -221,6 +222,7 @@ def delete_telegram(ms_id):
 
     User.objects(ms_id=ms_id).update(pull__devices__telegram_id=id)
     return "OK", 200
+
 
 @bp.get("/status")
 def get_node_status():
