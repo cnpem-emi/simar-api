@@ -5,7 +5,17 @@ from mongoengine import (
     ListField,
     EmbeddedDocument,
 )
-from mongoengine.fields import BooleanField, FloatField, IntField
+from mongoengine.fields import (
+    BooleanField,
+    FloatField,
+    IntField,
+    DateTimeField,
+    SortedListField,
+    ObjectIdField,
+)
+from bson.objectid import ObjectId
+
+from datetime import datetime
 
 
 class Pv(EmbeddedDocument):
@@ -23,8 +33,20 @@ class Device(EmbeddedDocument):
     p256dh = StringField(required=True)
 
 
+class Notification(EmbeddedDocument):
+    date = DateTimeField(default=datetime.now())
+    message = StringField(required=True)
+    oid = ObjectIdField(required=True, default=ObjectId, unique=True, primary_key=True)
+
+    def to_json(self):
+        return {"date": self.date, "message": self.message, "oid": str(self.oid)}
+
+
 class User(Document):
     ms_id = StringField(required=True, unique=True)
     devices = ListField(EmbeddedDocumentField(Device), required=False)
+    notifications = SortedListField(
+        EmbeddedDocumentField(Notification), required=False, ordering="date"
+    )
     pvs = ListField(EmbeddedDocumentField(Pv), required=True)
     telegram_id = IntField(required=False)

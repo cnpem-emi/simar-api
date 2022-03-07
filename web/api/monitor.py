@@ -1,6 +1,6 @@
 import json
 from pywebpush import WebPushException, webpush
-from api.models import User
+from api.models import User, Notification
 from api.templates import (
     telegram_warning_high,
     telegram_warning_low,
@@ -60,6 +60,7 @@ def main_loop(private_key, claims, telegram_token):
                 last_pv = pv.name
 
             if message:
+                user.notifications.push(Notification(message=message))
                 if warning_count > 1:
                     message = f"{last_pv} and {warning_count - 1} other PV{'s' if warning_count - 2 > 0 else ''} have violated their limits"  # noqa: E501
 

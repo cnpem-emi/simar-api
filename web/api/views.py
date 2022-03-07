@@ -1,4 +1,3 @@
-import json
 from redis import Redis
 from api.consts import (
     DETAIL_EQUIPMENT,
@@ -19,7 +18,7 @@ from api.util import (
 from flask import jsonify, request, current_app, Blueprint
 from api.models import Pv, User, Device
 from api.templates import hello
-from pywebpush import webpush, WebPushException
+from bson import ObjectId
 
 redis_server = Redis(host="redis-db", port=6379, decode_responses=True)
 bp = Blueprint("simar", __name__)
@@ -104,38 +103,6 @@ def unsubscribe(ms_id):
 @validate_id
 def unsubscribe_all(ms_id):
     User.objects(ms_id=ms_id).delete()
-    return "OK", 200
-
-
-@bp.post("/notify")
-@validate_id
-def notify(ms_id):
-    count = 0
-
-    data = {
-        "title": request.json.get("title"),
-        "body": request.json.get("body"),
-        "url": request.json.get("url"),
-    }
-
-    for device in User.objects(ms_id=ms_id)[0].devices:
-        try:
-            sub = json.dumps(
-                {
-                    "endpoint": device.endpoint,
-                    "keys": {"auth": device.auth, "p256dh": device.p256dh},
-                }
-            )
-            webpush(
-                subscription_info=json.loads(sub),
-                data=json.dumps(data),
-                vapid_private_key=current_app.config["VAPID_PRIVATE_KEY"],
-                vapid_claims=current_app.config["VAPID_CLAIMS"],
-            )
-            count += 1
-        except WebPushException as e:
-            print(e.response.json())
-
     return "OK", 200
 
 
@@ -400,5 +367,29 @@ def delete_logs(ms_id):
 
     for bbb in request.json:
         redis_server.hdel(f"{bbb.get('key')}:Logs", *bbb.get("timestamps"))
+
+    return "OK", 200
+
+
+@bp.get("/notification")
+@validate_id
+def get_notifications(ms_id):
+    try:
+        user = User.objects(ms_id=ms_id)[0]
+    except IndexError:
+        return "No user found", 404
+
+    return jsonify([notification.to_json() for notification in user["notifications"]])
+
+
+@bp.delete("/notification")
+@validate_id
+def delete_notifications(ms_id):
+    oids = request.args.getlist("oid")
+
+    if not oids:
+        return "No notification IDs sent", 400
+
+    User.objects(ms_id=ms_id).update(pull__notifications__oid__in=[ObjectId(o) for o in oids])
 
     return "OK", 200

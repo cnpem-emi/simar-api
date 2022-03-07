@@ -6,7 +6,7 @@ WORKDIR $APP_HOME
 
 COPY web/ $APP_HOME
 
-RUN apt-get update && apt-get install -y --no-install-recommends netcat nginx
+RUN ln -sf /usr/share/zoneinfo/Brazil/East /etc/localtime && apt-get update && apt-get install -y --no-install-recommends netcat nginx
 RUN pip install --upgrade pip
 RUN pip install -r requirements.txt
 
