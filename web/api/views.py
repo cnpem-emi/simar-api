@@ -294,7 +294,7 @@ def get_beaglebones():
 
         bbb_info["key"] = bbb
         if "nameservers" in bbb_info:
-            bbb_info["nameservers"] = bbb_info["nameservers"].split(",")
+            bbb_info["nameservers"] = bbb_info["nameservers"].replace(" ", "").split(",")
 
         if "ps" in request.args:
             try:
