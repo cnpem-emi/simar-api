@@ -3,6 +3,9 @@ from api.consts import (
     DETAIL_EQUIPMENT,
     IP_TYPES,
     RESTART_SERVICE,
+    SET_HOSTNAME,
+    SET_IP,
+    SET_NAMESERVERS,
     STOP_SERVICE,
 )
 from zoneinfo import ZoneInfo
@@ -304,6 +307,32 @@ def get_beaglebones():
             valid_bbbs.append(bbb_info)
 
     return jsonify(valid_bbbs)
+
+
+@bp.post("/networking")
+@validate_id
+def configure_networking(ms_id):
+    if not any(s in request.json for s in ["ip", "hostname", "nameserver"]):
+        return "Bad Request", 400
+
+    try:
+        for target in request.json.get("ip") or []:
+            redis_server.rpush(
+                f"{target['key']}:Command",
+                f"{SET_IP};{target['type']};{target.get('ip')};{target.get('mask')};{target.get('gateway')}",
+            )
+
+        for target in request.json.get("hostname") or []:
+            redis_server.rpush(f"{target['key']}:Command", f"{SET_HOSTNAME};{target['name']}")
+
+        for target in request.json.get("nameservers") or []:
+            redis_server.rpush(
+                f"{target['key']}:Command", f"{SET_NAMESERVERS};{';'.join(target['nameservers'])}"
+            )
+    except KeyError:
+        return "Bad Request", 400
+
+    return "OK", 200
 
 
 @bp.post("/services")
