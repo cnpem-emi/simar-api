@@ -270,6 +270,9 @@ def get_beaglebones():
         else:
             bbb_info["sector"] = "Others"
 
+        if "name" not in bbb_info:
+            bbb_info["name"] = "Unknown"
+
         try:
             bbb_info["ip_type"] = IP_TYPES[bbb_info["ip_type"]]
         except KeyError:
