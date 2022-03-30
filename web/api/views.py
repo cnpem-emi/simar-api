@@ -286,11 +286,18 @@ def get_beaglebones():
         if "ip_address" not in bbb_info:
             bbb_info["ip_address"] = bbb.split(":")[1]
 
-        bbb_info["last_seen"] = (
-            datetime.fromtimestamp(float(bbb_info["ping_time"]), ZoneInfo("America/Sao_Paulo"))
-            .isoformat()
-            .replace("T", " ")
-        )
+        try:
+            bbb_info["last_seen"] = (
+                datetime.fromtimestamp(float(bbb_info["ping_time"]), ZoneInfo("America/Sao_Paulo"))
+                .isoformat()
+                .replace("T", " ")
+            )
+        except KeyError:
+            bbb_info["last_seen"] = (
+                datetime.fromtimestamp(datetime.now(), ZoneInfo("America/Sao_Paulo"))
+                .isoformat()
+                .replace("T", " ")
+            )
 
         bbb_info["key"] = bbb
         if "nameservers" in bbb_info:
@@ -379,7 +386,9 @@ def get_logs():
                     "name": bbb.split(":")[2],
                     "timestamp": timestamp,
                     "message": message,
-                    "date": datetime.fromtimestamp(float(timestamp)).isoformat().replace("T", " "),
+                    "date": datetime.fromtimestamp(float(timestamp), ZoneInfo("America/Sao_Paulo"))
+                    .isoformat()
+                    .replace("T", " "),
                     "key": ":".join(bbb.split(":")[:-1]),
                 }
             )
