@@ -36,10 +36,7 @@ class Device(EmbeddedDocument):
 class Notification(EmbeddedDocument):
     date = DateTimeField(default=datetime.now())
     message = StringField(required=True)
-    oid = ObjectIdField(required=True, default=ObjectId, unique=True, primary_key=True)
-
-    def to_json(self):
-        return {"date": self.date, "message": self.message, "oid": str(self.oid)}
+    oid = ObjectIdField(required=True, default=ObjectId)
 
 
 class User(Document):
@@ -50,3 +47,9 @@ class User(Document):
     )
     pvs = ListField(EmbeddedDocumentField(Pv), required=True)
     telegram_id = IntField(required=False)
+
+    meta = {
+        "indexes": [
+            {"fields": ["-notifications"], "unique": False, "sparse": False},
+        ],
+    }

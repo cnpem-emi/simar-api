@@ -297,9 +297,7 @@ def get_beaglebones():
             )
         except KeyError:
             bbb_info["last_seen"] = (
-                datetime.fromtimestamp(datetime.now(), ZoneInfo("America/Sao_Paulo"))
-                .isoformat()
-                .replace("T", " ")
+                datetime.now(tz=ZoneInfo("America/Sao_Paulo")).isoformat().replace("T", " ")
             )
 
         bbb_info["key"] = bbb
