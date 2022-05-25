@@ -19,7 +19,7 @@ from api.util import (
     get_pwr_supply_table,
 )
 from flask import jsonify, request, current_app, Blueprint
-from api.models import Pv, User, Device
+from api.models import Pv, User, Device, Ac, Outlet
 from api.templates import hello
 from bson import ObjectId
 
@@ -69,18 +69,18 @@ def subscribe(ms_id):
         if pv.get("hi_limit") < pv.get("lo_limit"):
             return "Invalid limits", 400
 
-        new_pv = Pv(
-            name=pv.get("name"),
-            hi_limit=pv.get("hi_limit"),
-            lo_limit=pv.get("lo_limit"),
-            subbed=True,
-        )
-
         update = User.objects(ms_id=ms_id, pvs__name=pv.get("name")).update_one(
             set__pvs__S__subbed=True,
         )
 
         if not update:
+            new_pv = Pv(
+                name=pv.get("name"),
+                hi_limit=pv.get("hi_limit"),
+                lo_limit=pv.get("lo_limit"),
+                subbed=True,
+            )
+
             User.objects(ms_id=ms_id).update_one(
                 add_to_set__pvs=new_pv,
                 add_to_set__devices=device,
@@ -136,36 +136,71 @@ def set_limits(ms_id):
 @bp.post("/outlets")
 @validate_id_with_username
 def set_outlets(ms_id, username):
-    if not any(s in request.json for s in ["host", "outlets"]):
+    if not any(s in request.json for s in ["host", "outlets"]) or not request.json.get("outlets"):
         return "Bad Request", 400
 
     validated_outlets = {}
+    host = request.args.get("host")
 
-    for outlet, status in enumerate(request.json.get("outlets")):
-        if status not in [0, 1]:
-            continue
+    try:
+        outlet_names = {}
+        for outlet in request.json.get("outlets"):
+            if not isinstance(outlet["setpoint"], bool):
+                return "Bad Request", 400
 
-        validated_outlets[outlet] = str(status) + ":" + username
+            validated_outlets[outlet["id"]] = "1" if outlet["setpoint"] else "0" + ":" + username
+            outlet_names[f"set__ac_power__S__outlets__{outlet['id']}__name"] = outlet.get(
+                "name"
+            ) or str(outlet["id"])
 
-    if validated_outlets:
+        user = User.objects(ms_id=ms_id)
+        if not user.filter(ac_power__host=host).update(**outlet_names):
+            user.update(
+                add_to_set__ac_power=Ac(
+                    host=host, outlets=[Outlet(name=n) for n in list(outlet_names.values())]
+                ),
+                upsert=True,
+            )
+
         redis_server.hmset(request.args.get("host"), validated_outlets)
-    else:
+    except AttributeError:
         return "Bad Request", 400
 
     return "OK", 200
 
 
 @bp.get("/outlets")
-def get_outlets():
+@validate_id
+def get_outlets(ms_id):
     if "host" not in request.args:
         return "Bad Request", 400
 
     validated_outlets = []
+    host = request.args["host"]
 
-    for status in redis_server.hgetall(request.args.get("host") + ":RB").values():
-        validated_outlets.append(1 if status == "1" else 0)
+    try:
+        names = [
+            o.name
+            for o in User.objects(ms_id=ms_id, ac_power__host=host)
+            .fields(ac_power__outlets=1)
+            .first()
+            .ac_power[0]
+            .outlets
+        ]
+    except AttributeError:
+        names = [str(i) for i in range(0, 7)]
 
-    return jsonify({"outlets": validated_outlets})
+    try:
+        for i, status in enumerate(redis_server.hgetall(request.args["host"] + ":RB").values()):
+            validated_outlets.append({"status": 1 if status == "1" else 0, "name": names[i]})
+    except (KeyError, AttributeError):
+        pass
+
+    return jsonify(
+        {
+            "outlets": validated_outlets,
+        }
+    )
 
 
 @bp.post("/telegram")
@@ -223,7 +258,7 @@ def get_node_status():
 def get_devices(ms_id):
 
     try:
-        user = User.objects(ms_id=ms_id)[0].to_mongo()
+        user = User.objects(ms_id=ms_id).first().to_mongo()
     except IndexError:
         return "No user found", 404
 

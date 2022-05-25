@@ -1,3 +1,4 @@
+
 from mongoengine import (
     Document,
     EmbeddedDocumentField,
@@ -39,6 +40,15 @@ class Notification(EmbeddedDocument):
     oid = ObjectIdField(required=True, default=ObjectId)
 
 
+class Outlet(EmbeddedDocument):
+    name = StringField(required=True)
+
+
+class Ac(EmbeddedDocument):
+    host = StringField(required=True)
+    outlets = ListField(EmbeddedDocumentField(Outlet), required=False)
+
+
 class User(Document):
     ms_id = StringField(required=True, unique=True)
     devices = ListField(EmbeddedDocumentField(Device), required=False)
@@ -47,6 +57,7 @@ class User(Document):
     )
     pvs = ListField(EmbeddedDocumentField(Pv), required=True)
     telegram_id = IntField(required=False)
+    ac_power = ListField(EmbeddedDocumentField(Ac), required=False)
 
     meta = {
         "indexes": [
