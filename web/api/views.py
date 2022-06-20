@@ -19,7 +19,19 @@ from api.util import (
     get_pwr_supply_table,
 )
 from flask import jsonify, request, current_app, Blueprint
-from api.models import LogSchema, NetworkingSchema, Pv, PvSchema, ServiceSchema, SubscriptionSchema, User, Device, Ac, Outlet
+from api.models import (
+    LogSchema,
+    NetworkingSchema,
+    OutletSchema,
+    Pv,
+    PvSchema,
+    ServiceSchema,
+    SubscriptionSchema,
+    User,
+    Device,
+    Ac,
+    Outlet,
+)
 from api.templates import hello
 from bson import ObjectId
 from webargs import fields
@@ -37,7 +49,7 @@ def get_pvs(ms_id):
     except Exception:
         return "User not found", 404
 
-# TODO: check
+
 @bp.post("/subscribe")
 @use_args(SubscriptionSchema())
 @validate_id
@@ -78,7 +90,7 @@ def subscribe(ms_id, args):
 
     return jsonify(args["pvs"]), 200
 
-# TODO: check
+
 @bp.post("/unsubscribe")
 @use_args({"pvs": fields.List(fields.Str, required=True)})
 @validate_id
@@ -95,12 +107,12 @@ def unsubscribe_all(ms_id):
     User.objects(ms_id=ms_id).delete()
     return "OK", 200
 
-# TODO: check
+
 @bp.post("/limits")
-@use_args({"pvs": PvSchema()})
+@use_args(PvSchema(many=True))
 @validate_id
 def set_limits(ms_id, args):
-    for pv in args["pvs"]:
+    for pv in args:
         update = 0
 
         try:
@@ -111,24 +123,22 @@ def set_limits(ms_id, args):
             pass
 
         if not update:
-            new_pv = Pv(
-                hi_limit=pv["hi_limit"], lo_limit=pv["lo_limit"], name=pv["name"]
-            )
+            new_pv = Pv(hi_limit=pv["hi_limit"], lo_limit=pv["lo_limit"], name=pv["name"])
             User.objects(ms_id=ms_id).update_one(
                 add_to_set__pvs=new_pv,
                 upsert=True,
             )
     return "OK", 200
 
-# TODO: check
+
 @bp.post("/outlets/<string:host>")
-@use_args({"outlets": fields.List(fields.Str, required=True)})
+@use_args(OutletSchema(many=True))
 @validate_id_with_username
-def set_outlets(ms_id, username, host, args):
+def set_outlets(ms_id, username, args, host):
     validated_outlets = {}
     try:
         outlet_names = {}
-        for outlet in args["outlets"]:
+        for outlet in args:
             if not isinstance(outlet["setpoint"], bool):
                 return "Bad Request", 400
 
@@ -146,13 +156,13 @@ def set_outlets(ms_id, username, host, args):
                 upsert=True,
             )
 
-        redis_server.hmset(request.args.get("host"), validated_outlets)
+        redis_server.hmset(host, validated_outlets)
     except AttributeError:
         return "Bad Request", 400
 
     return "OK", 200
 
-# TODO: check
+
 @bp.get("/outlets/<string:host>")
 @validate_id
 def get_outlets(ms_id, host):
@@ -171,14 +181,14 @@ def get_outlets(ms_id, host):
         names = [str(i) for i in range(0, 7)]
 
     try:
-        for i, status in enumerate(redis_server.hgetall(request.args["host"] + ":RB").values()):
+        for i, status in enumerate(redis_server.hgetall(host + ":RB").values()):
             validated_outlets.append({"status": 1 if status == "1" else 0, "name": names[i]})
     except (KeyError, AttributeError):
         pass
 
     return jsonify(validated_outlets)
 
-# TODO: check
+
 @bp.post("/telegram/<string:id>")
 @validate_id_with_name
 def register_telegram(ms_id, name, id):
@@ -187,14 +197,13 @@ def register_telegram(ms_id, name, id):
         current_app.config["TELEGRAM_TOKEN"], hello.safe_substitute(NAME=name), id
     )
 
-# TODO: check
 @bp.delete("/telegram/<string:id>")
 @validate_id
 def delete_telegram(ms_id, id):
     User.objects(ms_id=ms_id).update(pull__devices__telegram_id=id)
     return "OK", 200
 
-# TODO: check
+
 @bp.get("/status/<string:host>")
 def get_node_status(host):
     status = redis_server.hget(host, "state_string")
@@ -225,13 +234,14 @@ def get_devices(ms_id):
     except (KeyError, IndexError):
         return "No devices found for user", 404
 
-# TODO: check
+
 @bp.delete("/devices")
 @use_args({"endpoints": fields.List(fields.Str)}, location="query")
 @validate_id
 def delete_devices(ms_id, args):
     User.objects(ms_id=ms_id).update(pull__devices__endpoint__in=args["endpoints"])
     return "OK", 200
+
 
 @bp.get("/beaglebones")
 @use_args({"ps": fields.Bool(required=False)}, location="query")
@@ -245,8 +255,17 @@ def get_beaglebones(args):
         if any(s in bbb for s in [":Command", ":Logs"]):
             continue
 
-        keys = ["matching_bbb", "sector", "ip_type", "name", "equipment", "state_string", "ip_address", "ping_time"]
-        bbb_info = {keys[i]:v for i, v in enumerate(redis_server.hmget(bbb, keys))}
+        keys = [
+            "matching_bbb",
+            "sector",
+            "ip_type",
+            "name",
+            "equipment",
+            "state_string",
+            "ip_address",
+            "ping_time",
+        ]
+        bbb_info = {keys[i]: v for i, v in enumerate(redis_server.hmget(bbb, keys))}
 
         if "matching_bbb" in bbb_info and bbb_info["matching_bbb"]:
             bbb_info["role"] = bbb_info["matching_bbb"].capitalize()
@@ -280,14 +299,12 @@ def get_beaglebones(args):
             bbb_info["ip_address"] = bbb.split(":")[1]
 
         try:
-            bbb_info["last_seen"] = (
-                datetime.fromtimestamp(float(bbb_info["ping_time"]), ZoneInfo("America/Sao_Paulo")).strftime("%x %X")
-            )
+            bbb_info["last_seen"] = datetime.fromtimestamp(
+                float(bbb_info["ping_time"]), ZoneInfo("America/Sao_Paulo")
+            ).strftime("%x %X")
         except KeyError:
-            bbb_info["last_seen"] = (
-                datetime.now(tz=ZoneInfo("America/Sao_Paulo")).strftime("%x %X")
-            )
-        
+            bbb_info["last_seen"] = datetime.now(tz=ZoneInfo("America/Sao_Paulo")).strftime("%x %X")
+
         del bbb_info["matching_bbb"]
         del bbb_info["ping_time"]
         bbb_info["key"] = bbb
@@ -304,11 +321,12 @@ def get_beaglebones(args):
 
     return jsonify(valid_bbbs)
 
-# TODO: check
+
 @bp.get("/beaglebones/details/<string:node>")
 def get_beaglebone_details(node):
     keys = ["nameservers", "details", "disk_usage"]
-    return {keys[i]:v for i, v in enumerate(redis_server.hmget(node, keys))}
+    return {keys[i]: v for i, v in enumerate(redis_server.hmget(node, keys))}
+
 
 @bp.post("/beaglebones/networking")
 @use_args(NetworkingSchema(many=True))
@@ -320,7 +338,7 @@ def configure_networking(ms_id, args):
                 f"{node['key']}:Command",
                 f"{SET_IP};{node['type']};{node['ip']};{node['mask']};{node['gateway']}",
             )
-        
+
         if node.get("hostname"):
             redis_server.rpush(f"{node['key']}:Command", f"{SET_HOSTNAME};{node['hostname']}")
 
@@ -330,6 +348,7 @@ def configure_networking(ms_id, args):
             )
 
         return "OK", 200
+
 
 @bp.post("/beaglebones/services")
 @use_args(ServiceSchema(many=True))
@@ -342,8 +361,14 @@ def change_services(ms_id, args):
 
     return "OK", 200
 
+
 @bp.post("/beaglebones")
-@use_args({"delete": fields.List(fields.Str(), missing=[]), "reboot": fields.List(fields.Str(), missing=[])})
+@use_args(
+    {
+        "delete": fields.List(fields.Str(), missing=[]),
+        "reboot": fields.List(fields.Str(), missing=[]),
+    }
+)
 @validate_id
 def change_beaglebones(ms_id, args):
     for target in args["delete"]:
@@ -353,6 +378,7 @@ def change_beaglebones(ms_id, args):
         redis_server.rpush(f"{target}:Command", 1)
 
     return "OK", 200
+
 
 @bp.get("/logs")
 def get_logs():
@@ -366,12 +392,15 @@ def get_logs():
                     "name": bbb.split(":")[2],
                     "timestamp": timestamp,
                     "message": message,
-                    "date": datetime.fromtimestamp(float(timestamp), ZoneInfo("America/Sao_Paulo")).strftime("%x %X"),
+                    "date": datetime.fromtimestamp(
+                        float(timestamp), ZoneInfo("America/Sao_Paulo")
+                    ).strftime("%x %X"),
                     "key": ":".join(bbb.split(":")[:-1]),
                 }
             )
 
     return jsonify(logs)
+
 
 # Blame DELETE not accepting bodies
 @bp.post("/del_logs")
@@ -383,24 +412,25 @@ def delete_logs(ms_id, args):
 
     return "OK", 200
 
-# TODO: check
+
 @bp.get("/notification")
 @validate_id
 def get_notifications(ms_id):
     try:
-        user = User.objects(ms_id=ms_id)[0]
+        return jsonify([{"date": n.date, "message": n.message, "oid": str(n.oid)} for n in User.objects(ms_id=ms_id)[0].notifications])
     except IndexError:
         return "No user found", 404
 
-    return jsonify([notification.to_json() for notification in user["notifications"]])
 
-# TODO: check
 @bp.delete("/notification")
 @use_args({"oid": fields.List(fields.Str)}, location="query")
 @validate_id
 def delete_notifications(ms_id, args):
-    User.objects(ms_id=ms_id).update(pull__notifications__oid__in=[ObjectId(o) for o in args["oid"]])
+    User.objects(ms_id=ms_id).update(
+        pull__notifications__oid__in=[ObjectId(o) for o in args["oid"]]
+    )
     return "OK", 200
+
 
 @bp.errorhandler(422)
 @bp.errorhandler(400)

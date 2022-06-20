@@ -1,4 +1,3 @@
-
 from mongoengine import (
     Document,
     EmbeddedDocumentField,
@@ -66,19 +65,21 @@ class User(Document):
         ],
     }
 
+
 class NetworkingSchema(Schema):
-    key=fields.Str(required=True)
-    nameservers=fields.List(fields.Str, required=False)
-    hostname=fields.Str(required=False)
-    ip=fields.Str(required=False)
-    mask=fields.Str(required=False)
-    gateway=fields.Str(required=False)
-    type=fields.Str(required=False)
+    key = fields.Str(required=True)
+    nameservers = fields.List(fields.Str, required=False)
+    hostname = fields.Str(required=False)
+    ip = fields.Str(required=False)
+    mask = fields.Str(required=False)
+    gateway = fields.Str(required=False)
+    type = fields.Str(required=False)
 
     @validates_schema
     def validate_requires(self, data, **kwargs):
         if "ip" in data and any(v not in data for v in ["mask", "gateway", "type"]):
             raise ValidationError("'type', 'gateway' and 'mask' are required when 'ip' is set")
+
 
 class PvSchema(Schema):
     name = fields.Str(required=True)
@@ -91,19 +92,27 @@ class PvSchema(Schema):
         if data["hi_limit"] < data["lo_limit"]:
             raise ValidationError("The lower limit should not be greater than the higher limit")
 
+
 class SubscriptionSchema(Schema):
     endpoint = fields.Str(required=True)
     auth = fields.Str(required=True)
     p256dh = fields.Str(required=True)
     user_agent = fields.Str(required=False, load_default="Unknown")
     host = fields.Str(required=True)
-    pv = fields.List(fields.Nested(PvSchema, required=False))
+    pvs = fields.List(fields.Nested(PvSchema, required=False))
+
 
 class ServiceSchema(Schema):
     key = fields.Str(required=True)
     restart = fields.List(fields.Str, required=False, load_default=[])
     stop = fields.List(fields.Str, required=False, load_default=[])
 
+
 class LogSchema(Schema):
     key = fields.Str(required=True)
     timestamps = fields.List(fields.Str, required=True)
+
+
+class OutletSchema(Schema):
+    id = fields.Int(required=True)
+    setpoint = fields.Bool(required=True)
