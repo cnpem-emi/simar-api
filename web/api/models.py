@@ -17,6 +17,7 @@ from mongoengine.fields import (
 from bson.objectid import ObjectId
 
 from datetime import datetime
+from marshmallow import Schema, ValidationError, fields, validates_schema
 
 
 class Pv(EmbeddedDocument):
@@ -64,3 +65,45 @@ class User(Document):
             {"fields": ["-notifications"], "unique": False, "sparse": False},
         ],
     }
+
+class NetworkingSchema(Schema):
+    key=fields.Str(required=True)
+    nameservers=fields.List(fields.Str, required=False)
+    hostname=fields.Str(required=False)
+    ip=fields.Str(required=False)
+    mask=fields.Str(required=False)
+    gateway=fields.Str(required=False)
+    type=fields.Str(required=False)
+
+    @validates_schema
+    def validate_requires(self, data, **kwargs):
+        if "ip" in data and any(v not in data for v in ["mask", "gateway", "type"]):
+            raise ValidationError("'type', 'gateway' and 'mask' are required when 'ip' is set")
+
+class PvSchema(Schema):
+    name = fields.Str(required=True)
+    hi_limit = fields.Float(required=True)
+    lo_limit = fields.Float(required=True)
+    subbed = fields.Bool(required=False, load_default=False)
+
+    @validates_schema
+    def validate_limits(self, data, **kwargs):
+        if data["hi_limit"] < data["lo_limit"]:
+            raise ValidationError("The lower limit should not be greater than the higher limit")
+
+class SubscriptionSchema(Schema):
+    endpoint = fields.Str(required=True)
+    auth = fields.Str(required=True)
+    p256dh = fields.Str(required=True)
+    user_agent = fields.Str(required=False, load_default="Unknown")
+    host = fields.Str(required=True)
+    pv = fields.List(fields.Nested(PvSchema, required=False))
+
+class ServiceSchema(Schema):
+    key = fields.Str(required=True)
+    restart = fields.List(fields.Str, required=False, load_default=[])
+    stop = fields.List(fields.Str, required=False, load_default=[])
+
+class LogSchema(Schema):
+    key = fields.Str(required=True)
+    timestamps = fields.List(fields.Str, required=True)
