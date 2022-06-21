@@ -18,7 +18,7 @@ from api.util import (
     validate_id_with_username,
     get_pwr_supply_table,
 )
-from flask import jsonify, request, current_app, Blueprint
+from flask import jsonify, current_app, Blueprint
 from api.models import (
     LogSchema,
     NetworkingSchema,
@@ -197,6 +197,7 @@ def register_telegram(ms_id, name, id):
         current_app.config["TELEGRAM_TOKEN"], hello.safe_substitute(NAME=name), id
     )
 
+
 @bp.delete("/telegram/<string:id>")
 @validate_id
 def delete_telegram(ms_id, id):
@@ -301,9 +302,11 @@ def get_beaglebones(args):
         try:
             bbb_info["last_seen"] = datetime.fromtimestamp(
                 float(bbb_info["ping_time"]), ZoneInfo("America/Sao_Paulo")
-            ).strftime("%x %X")
+            ).strftime("%Y-%m-%d %X")
         except KeyError:
-            bbb_info["last_seen"] = datetime.now(tz=ZoneInfo("America/Sao_Paulo")).strftime("%x %X")
+            bbb_info["last_seen"] = datetime.now(tz=ZoneInfo("America/Sao_Paulo")).strftime(
+                "%Y-%m-%d %X"
+            )
 
         del bbb_info["matching_bbb"]
         del bbb_info["ping_time"]
@@ -394,7 +397,7 @@ def get_logs():
                     "message": message,
                     "date": datetime.fromtimestamp(
                         float(timestamp), ZoneInfo("America/Sao_Paulo")
-                    ).strftime("%x %X"),
+                    ).strftime("%Y-%m-%d %X"),
                     "key": ":".join(bbb.split(":")[:-1]),
                 }
             )
@@ -417,7 +420,12 @@ def delete_logs(ms_id, args):
 @validate_id
 def get_notifications(ms_id):
     try:
-        return jsonify([{"date": n.date, "message": n.message, "oid": str(n.oid)} for n in User.objects(ms_id=ms_id)[0].notifications])
+        return jsonify(
+            [
+                {"date": n.date, "message": n.message, "oid": str(n.oid)}
+                for n in User.objects(ms_id=ms_id)[0].notifications
+            ]
+        )
     except IndexError:
         return "No user found", 404
 
