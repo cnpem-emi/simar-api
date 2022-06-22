@@ -265,6 +265,7 @@ def get_beaglebones(args):
             "state_string",
             "ip_address",
             "ping_time",
+            "details"
         ]
         bbb_info = {keys[i]: v for i, v in enumerate(redis_server.hmget(bbb, keys))}
 
@@ -310,6 +311,7 @@ def get_beaglebones(args):
 
         del bbb_info["matching_bbb"]
         del bbb_info["ping_time"]
+        del bbb_info["details"]
         bbb_info["key"] = bbb
 
         if ps:
