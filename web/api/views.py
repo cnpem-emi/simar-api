@@ -50,7 +50,7 @@ def get_pvs(ms_id):
         return "User not found", 404
 
 
-@bp.post("/subscribe")
+@bp.post("/pvs/subscribe")
 @use_args(SubscriptionSchema())
 @validate_id
 def subscribe(ms_id, args):
@@ -66,17 +66,14 @@ def subscribe(ms_id, args):
         add_to_set__devices=device,
     )
 
-    if not args.get("pvs"):
-        return "OK", 200
-
-    for pv in args.get("pvs"):
+    for pv in args.get("pvs") or []:
         update = User.objects(ms_id=ms_id, pvs__name=pv["name"]).update_one(
             set__pvs__S__subbed=True,
         )
 
         if not update:
             new_pv = Pv(
-                name=pv(pv["name"]),
+                name=pv["name"],
                 hi_limit=pv["hi_limit"],
                 lo_limit=pv["lo_limit"],
                 subbed=True,
@@ -88,11 +85,11 @@ def subscribe(ms_id, args):
                 upsert=True,
             )
 
-    return jsonify(args["pvs"]), 200
+    return jsonify(args.get("pvs")), 200
 
 
-@bp.post("/unsubscribe")
-@use_args({"pvs": fields.List(fields.Str, required=True)})
+@bp.post("/pvs/unsubscribe")
+@use_args({"pvs": fields.List(fields.Str(), required=True)})
 @validate_id
 def unsubscribe(ms_id, args):
     for pv in args["pvs"]:
@@ -101,14 +98,14 @@ def unsubscribe(ms_id, args):
     return jsonify(args["pvs"]), 200
 
 
-@bp.delete("/limits")
+@bp.delete("/pvs")
 @validate_id
 def unsubscribe_all(ms_id):
     User.objects(ms_id=ms_id).delete()
     return "OK", 200
 
 
-@bp.post("/limits")
+@bp.post("/pvs")
 @use_args(PvSchema(many=True))
 @validate_id
 def set_limits(ms_id, args):
@@ -136,29 +133,24 @@ def set_limits(ms_id, args):
 @validate_id_with_username
 def set_outlets(ms_id, username, args, host):
     validated_outlets = {}
-    try:
-        outlet_names = {}
-        for outlet in args:
-            if not isinstance(outlet["setpoint"], bool):
-                return "Bad Request", 400
+    outlet_names = {}
 
-            validated_outlets[outlet["id"]] = "1" if outlet["setpoint"] else "0" + ":" + username
-            outlet_names[f"set__ac_power__S__outlets__{outlet['id']}__name"] = outlet.get(
-                "name"
-            ) or str(outlet["id"])
+    for outlet in args:
+        validated_outlets[outlet["id"]] = "1" if outlet["setpoint"] else "0" + ":" + username
+        outlet_names[f"set__ac_power__S__outlets__{outlet['id']}__name"] = outlet.get(
+            "name"
+        ) or str(outlet["id"])
 
-        user = User.objects(ms_id=ms_id)
-        if not user.filter(ac_power__host=host).update(**outlet_names):
-            user.update(
-                add_to_set__ac_power=Ac(
-                    host=host, outlets=[Outlet(name=n) for n in list(outlet_names.values())]
-                ),
-                upsert=True,
-            )
+    user = User.objects(ms_id=ms_id)
+    if not user.filter(ac_power__host=host).update(**outlet_names):
+        user.update(
+            add_to_set__ac_power=Ac(
+                host=host, outlets=[Outlet(name=n) for n in list(outlet_names.values())]
+            ),
+            upsert=True,
+        )
 
-        redis_server.hmset(host, validated_outlets)
-    except AttributeError:
-        return "Bad Request", 400
+    redis_server.hmset(host, validated_outlets)
 
     return "OK", 200
 
@@ -205,7 +197,7 @@ def delete_telegram(ms_id, id):
     return "OK", 200
 
 
-@bp.get("/status/<string:host>")
+@bp.get("/beaglebones/status/<string:host>")
 def get_node_status(host):
     status = redis_server.hget(host, "state_string")
 
@@ -265,6 +257,7 @@ def get_beaglebones(args):
             "state_string",
             "ip_address",
             "ping_time",
+            "details",
         ]
         bbb_info = {keys[i]: v for i, v in enumerate(redis_server.hmget(bbb, keys))}
 
@@ -310,6 +303,7 @@ def get_beaglebones(args):
 
         del bbb_info["matching_bbb"]
         del bbb_info["ping_time"]
+        del bbb_info["details"]
         bbb_info["key"] = bbb
 
         if ps:
@@ -383,7 +377,7 @@ def change_beaglebones(ms_id, args):
     return "OK", 200
 
 
-@bp.get("/logs")
+@bp.get("/beaglebones/logs")
 def get_logs():
     logs = []
     for bbb in redis_server.scan_iter("BBB*Logs"):
@@ -406,7 +400,7 @@ def get_logs():
 
 
 # Blame DELETE not accepting bodies
-@bp.post("/del_logs")
+@bp.post("/beaglebones/del_logs")
 @use_args(LogSchema(many=True))
 @validate_id
 def delete_logs(ms_id, args):

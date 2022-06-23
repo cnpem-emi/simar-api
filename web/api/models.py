@@ -116,3 +116,4 @@ class LogSchema(Schema):
 class OutletSchema(Schema):
     id = fields.Int(required=True)
     setpoint = fields.Bool(required=True)
+    name = fields.String(required=False)

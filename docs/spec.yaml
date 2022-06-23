@@ -1,0 +1,577 @@
+openapi: 3.0.1
+info:
+  title: SIMAR API
+  description: 'Remote control API for SIMAR and control system Beaglebones'
+  contact:
+    email: sei@cnpem.br
+  license:
+    name: GPL v3.0
+    url: https://www.gnu.org/licenses/gpl-3.0.en.html
+  version: 1.0.0
+tags:
+- name: pvs
+  description: PV data for notification service
+- name: outlets
+  description: Remote outlet actuation
+- name: devices
+  description: Devices attached to the notification service
+- name: beaglebones
+  description: Beaglebone administration
+paths:
+  /pvs:
+    get:
+      tags:
+      - pvs
+      summary: Gets PV limits and subscription statuses
+      operationId: getPVs
+      security:
+        - bearer_auth: []
+      responses:
+        200:
+          description: ""
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/PV'
+        404:
+          description: User not found
+          content: {}
+    post:
+      tags:
+      - pvs
+      summary: Creates/modifies limits for a PV
+      operationId: postPVs
+      security:
+        - bearer_auth: []
+      responses:
+        default:
+          description: Successful operation
+          content: {}
+    delete:
+      tags:
+      - pvs
+      summary: Deletes all PV data for user
+      operationId: deletePVs
+      security:
+        - bearer_auth: []
+      responses:
+        default:
+          description: Successful operation
+          content: {}
+  /pvs/unsubscribe:
+    post:
+      tags:
+      - pvs
+      summary: Unsubscribes user from PVs without removing the attached device
+      operationId: unsubscribe
+      security:
+        - bearer_auth: []
+      requestBody:
+        description: PVs to unsubscribe to
+        content:
+          '*/*':
+            schema:
+              type: object
+              properties:
+                pvs
+                  type: array
+                  items:
+                    type: string
+                    example: IA-99RaCtrl:CO-SIMAR:Pressure-Mon
+        required: true
+      responses:
+        200:
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: string
+                  example: IA-99RaCtrl:CO-SIMAR:Pressure-Mon
+  /pvs/subscribe:
+    post:
+      tags:
+      - pvs
+      summary: Subscribe a device to given PVs
+      description: Enables notifications for logged user for all given PVs
+      operationId: subscribe
+      security:
+        - bearer_auth: []
+      requestBody:
+        description: Subscription object to be processed
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Subscription'
+        required: true
+      responses:
+        422:
+          description: Invalid input
+          content: {}
+  /outlets/{host}:
+    get:
+      tags:
+      - outlets
+      summary: Fetches outlet statuses for a given host
+      operationId: getOutlets
+      security:
+        - bearer_auth: []
+      parameters:
+      - name: host
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        200:
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Outlet'
+    post:
+      tags:
+      - outlets
+      summary: Sets outlet setpoints
+      operationId: setOutlets
+      parameters:
+      - name: host
+        in: path
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: '#/components/schemas/Outlet'
+        required: false
+      responses:
+        default:
+          description: Successful operation
+          content: {}
+  /telegram/{id}:
+    post:
+      tags:
+      - devices
+      summary: Sets Telegram ID for a user, to be used with notifications
+      operationId: setTelegram
+      security:
+        - bearer_auth: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        200:
+          description: Successful operation
+          content: {}
+    delete:
+      tags:
+      - devices
+      summary: Erases Telegram ID for a user
+      operationId: deleteTelegram
+      security:
+        - bearer_auth: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        200:
+          description: Successful operation
+          content: {}
+  /beaglebones/:
+    get:
+      tags:
+      - beaglebones
+      summary: Gets basic Beaglebone information
+      description: '*ps* query parameter controls whether or not the *ps* and *udc*
+        fields are included in response'
+      operationId: getBB
+      parameters:
+      - name: ps
+        in: query
+        schema:
+          type: boolean
+      responses:
+        200:
+          description: Succesful operation
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  allOf:
+                  - $ref: '#/components/schemas/Beaglebone'
+                  - type: object
+                    properties:
+                      ps:
+                        type: array
+                        items:
+                          type: string
+                      udc:
+                        type: array
+                        items:
+                          type: string
+    post:
+      tags:
+      - beaglebones
+      summary: Manipulates Beaglebones
+      operationId: setBBs
+      security:
+        - bearer_auth: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                reboot:
+                  type: string
+                delete:
+                  type: string
+        required: false
+      responses:
+        200:
+          description: Successful operation
+          content: {}
+  /beaglebones/status/{host}:
+    get:
+      tags:
+      - beaglebones
+      summary: Gets Beaglebone connection status
+      operationId: getBBstatus
+      parameters:
+      - name: host
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        200:
+          description: Returns connection status, or 'Moved - *new key*'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConnectionStatus'
+  /beaglebones/details/{host}:
+    get:
+      tags:
+      - beaglebones
+      summary: Gets Beaglebone details
+      operationId: getBBdetails
+      parameters:
+      - name: host
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        200:
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  nameservers:
+                    type: array
+                    items:
+                      type: string
+                      example: 10.0.0.1
+                  details:
+                    type: string
+                  disk_usage:
+                    type: string
+                    example: "70.01"
+  /beaglebones/networking:
+    post:
+      tags:
+      - beaglebones
+      summary: Changes networking settings for Beaglebones
+      operationId: setBBnetworking
+      security:
+        - bearer_auth: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Networking'
+        required: false
+      responses:
+        200:
+          description: Successful operation
+          content: {}
+  /beaglebones/services:
+    post:
+      tags:
+      - beaglebones
+      summary: Manipulates Beaglebone services
+      operationId: setBBservices
+      security:
+        - bearer_auth: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                type: object
+                properties:
+                  key:
+                    type: string
+                  restart:
+                    type: string
+                    example: bbbread
+                  stop:
+                    type: string
+                    example: bbbread
+        required: false
+      responses:
+        200:
+          description: Successful operation
+          content: {}
+    
+  /beaglebones/logs:
+    get:
+      tags:
+      - beaglebones
+      summary: Gets Beaglebone logs
+      operationId: getBBlogs
+      responses:
+        200:
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Log'
+  /beaglebones/del_logs:
+    post:
+      tags:
+      - beaglebones
+      summary: Gets Beaglebone logs
+      operationId: delBBlogs
+      security:
+        - bearer_auth: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                type: object
+                properties:
+                  key:
+                    type: string
+                    example: 10.128.111.111
+                  timestamps:
+                    type: array
+                    items:
+                      type: string
+                      example: "0"
+        required: false
+      responses:
+        200:
+          description: Successful operation
+          content: {}
+  /devices:
+    get:
+      tags:
+      - devices
+      summary: Gets devices attached to the notification service
+      operationId: getDevices
+      security:
+        - bearer_auth: []
+      responses:
+        200:
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  devices:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Device'
+                  telegram_id:
+                    type: string
+    delete:
+      tags:
+      - devices
+      summary: Unattaches devices from the notification service
+      operationId: deleteDevices
+      parameters:
+      - name: oid
+        in: query
+        required: true
+        schema:
+          type: string
+      security:
+        - bearer_auth: []
+      responses:
+        200:
+          description: Successful operation
+          content: {}
+components:
+  securitySchemes:
+    bearer_auth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT 
+  schemas:
+    Log:
+      type: object
+      properties:
+        ip_address:
+          type: string
+          example: 10.128.111.111
+        name:
+          type: string
+        timestamp:
+          type: string
+          example: "0"
+        message:
+          type: string
+          example: Disconnected
+        key:
+          type: string
+        date:
+          pattern: /([0-9]{4})-(?:[0-9]{2})-([0-9]{2}) ([0-9]{4}):(?:[0-9]{2}):([0-9]{2})/
+          type: string
+          example: 2022-06-21 11:45:50
+    ConnectionStatus:
+      type: object
+      properties:
+        status:
+          type: string
+          example: Connected
+    Networking:
+      required:
+      - key
+      type: object
+      properties:
+        key:
+          type: string
+        nameservers:
+          type: array
+          items:
+            type: string
+            example: 10.0.0.1
+        hostname:
+          type: string
+        ip:
+          type: string
+        mask:
+          type: string
+        gateway:
+          type: string
+        type:
+          type: string
+          example: DHCP
+    Device:
+      type: object
+      properties:
+        endpoint:
+          type: string
+        user_agent:
+          type: string
+        host:
+          type: string
+        auth:
+          type: string
+        p256dh:
+          type: string
+    Outlet:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: uint8
+        setpoint:
+          type: boolean
+        name:
+          type: string
+    Subscription:
+      allOf:
+      - $ref: '#/components/schemas/Device'
+      - type: object
+        properties:
+          pvs:
+            type: array
+            items:
+              $ref: '#/components/schemas/PV'
+    PV:
+      required:
+      - hi_limit
+      - lo_limit
+      - name
+      type: object
+      properties:
+        name:
+          type: string
+          example: IA-99RaCtrl:CO-SIMAR:Pressure-Mon
+        hi_limit:
+          type: number
+          format: double
+        lo_limit:
+          type: number
+          format: double
+        subbed:
+          type: boolean
+    Beaglebone:
+      type: object
+      properties:
+        role:
+          type: string
+          example: Primary
+        sector:
+          type: string
+          example: Conectivity
+        ip_type:
+          type: string
+          enum:
+          - Static
+          - DHCP
+        equipment:
+          type: string
+          enum:
+          - Unknown
+          - Power Supply
+          - SIMAR
+          - CountingPRU
+          - Thermo Probe
+          - MKS
+          - 4UHV
+          - SPIxCONV
+          - MBTemp
+          - No Device
+        state_string:
+          type: string
+          example: Connected
+        last_seen:
+          pattern: /([0-9]{4})-(?:[0-9]{2})-([0-9]{2}) ([0-9]{4}):(?:[0-9]{2}):([0-9]{2})/
+          type: string
+          example: 2022-06-21 11:45:50
+        key:
+          type: string
+        name:
+          type: string
+        ip_address:
+          type: string
+          example: 10.128.111.111
