@@ -3,7 +3,7 @@
 
 SIMAR's REST API for notifications and more. Utilizes the Web Push API to push notifications to browsers.
 
-For detailed information on running, endpoints and other documentation, check the [wiki](https://github.com/cnpem-iot/simar-api/wiki).
+For detailed information on endpoints and other documentation, check the [OpenAPI docs](https://cnpem-sei.github.io/simar-api/).
 
 ## Running (Docker)
 
