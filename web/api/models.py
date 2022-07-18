@@ -1,3 +1,5 @@
+from typing_extensions import Required
+from zoneinfo import ZoneInfo
 from mongoengine import (
     Document,
     EmbeddedDocumentField,
@@ -17,6 +19,7 @@ from bson.objectid import ObjectId
 
 from datetime import datetime
 from marshmallow import Schema, ValidationError, fields, validates_schema
+from numpy import require
 
 
 class Pv(EmbeddedDocument):
@@ -117,3 +120,12 @@ class OutletSchema(Schema):
     id = fields.Int(required=True)
     setpoint = fields.Bool(required=True)
     name = fields.String(required=False)
+
+class BeagleBoneSchema(Schema):
+    role = fields.Str(required=True, load_default="Primary")
+    sector = fields.Str(required=True, load_default="Others")
+    name = fields.Str(required=True, load_default="Unknown")
+    ip_type = fields.Str(required=True, load_default="Static")
+    bbb_info = fields.Str(required=True, default="Unknown")
+    ip_address = fields.Str(required=True)
+    last_seen = fields.DateTime(required=True, load_default=datetime.now(tz=ZoneInfo("America/Sao_Paulo")), format="%Y-%m-%d %X")

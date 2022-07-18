@@ -75,7 +75,7 @@ paths:
             schema:
               type: object
               properties:
-                pvs
+                pvs:
                   type: array
                   items:
                     type: string
@@ -364,7 +364,7 @@ paths:
     post:
       tags:
       - beaglebones
-      summary: Gets Beaglebone logs
+      summary: Removes Beaglebone logs
       operationId: delBBlogs
       security:
         - bearer_auth: []
