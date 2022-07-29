@@ -310,11 +310,10 @@ def get_beaglebones(args):
             try:
                 bbb_info["name"] = bbb_info["name"].replace("--", ":")
                 bbb_info = bbb_info | ps[bbb_info["ip_address"]]
-                valid_bbbs.append(bbb_info)
             except KeyError:
                 pass
-        else:
-            valid_bbbs.append(bbb_info)
+
+        valid_bbbs.append(bbb_info)
 
     return jsonify(valid_bbbs)
 
