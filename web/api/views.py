@@ -1,4 +1,4 @@
-from redis import Redis
+from redis import Redis, exceptions
 from api.consts import (
     DETAIL_EQUIPMENT,
     IP_TYPES,
@@ -150,7 +150,10 @@ def set_outlets(ms_id, username, args, host):
             upsert=True,
         )
 
-    redis_server.hmset(host, validated_outlets)
+    try:
+        redis_server.hmset(host, validated_outlets)
+    except exceptions.ResponseError:
+        return "Outlet does not exist", 404
 
     return "OK", 200
 
