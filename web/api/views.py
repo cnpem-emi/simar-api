@@ -299,7 +299,7 @@ def get_beaglebones(args):
             bbb_info["last_seen"] = datetime.fromtimestamp(
                 float(bbb_info["ping_time"]), ZoneInfo("America/Sao_Paulo")
             ).strftime("%Y-%m-%d %X")
-        except KeyError:
+        except (KeyError, TypeError):
             bbb_info["last_seen"] = datetime.now(tz=ZoneInfo("America/Sao_Paulo")).strftime(
                 "%Y-%m-%d %X"
             )

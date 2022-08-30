@@ -24,7 +24,7 @@ class Pv(EmbeddedDocument):
     name = StringField(required=True)
     hi_limit = FloatField(required=True)
     lo_limit = FloatField(required=True)
-    subbed = BooleanField(required=True, default=False)
+    subbed = BooleanField(required=False, load_default=False, dump_default=False)
 
 
 class Device(EmbeddedDocument):
@@ -121,14 +121,14 @@ class OutletSchema(Schema):
 
 
 class BeagleBoneSchema(Schema):
-    role = fields.Str(required=True, load_default="Primary")
-    sector = fields.Str(required=True, load_default="Others")
-    name = fields.Str(required=True, load_default="Unknown")
-    ip_type = fields.Str(required=True, load_default="Static")
-    bbb_info = fields.Str(required=True, default="Unknown")
+    role = fields.Str(required=False, load_default="Primary")
+    sector = fields.Str(required=False, load_default="Others")
+    name = fields.Str(required=False, load_default="Unknown")
+    ip_type = fields.Str(required=False, load_default="Static")
+    bbb_info = fields.Str(required=False, load_default="Unknown")
     ip_address = fields.Str(required=True)
     last_seen = fields.DateTime(
-        required=True,
+        required=False,
         load_default=datetime.now(tz=ZoneInfo("America/Sao_Paulo")),
         format="%Y-%m-%d %X",
     )
